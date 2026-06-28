@@ -13,7 +13,10 @@ import numpy as np
 from .analytics import SequenceAnalytics, line_x_pixels
 from .config import Settings, get_settings
 from .detection import Detection, build_detector
+from .logging_utils import get_logger
 from .tracking import CentroidTracker
+
+log = get_logger(__name__)
 
 
 @dataclass
@@ -32,12 +35,20 @@ class FrameResult:
 
 
 class VisionPipeline:
-    def __init__(self, settings: Settings | None = None):
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        zone: tuple[float, float, float, float] | None = None,
+    ):
         self.settings = settings or get_settings()
         self.detector = build_detector(self.settings)
         self.tracker = CentroidTracker(self.settings)
-        self.analytics = SequenceAnalytics(line_x_pixels(self.settings))
+        self.analytics = SequenceAnalytics(line_x_pixels(self.settings), zone=zone)
         self._frame_index = 0
+        log.info(
+            "VisionPipeline ready (detector=%s, zone=%s)",
+            self.settings.detector, zone,
+        )
 
     def process(self, frame: np.ndarray) -> FrameResult:
         detections = self.detector.detect(frame)

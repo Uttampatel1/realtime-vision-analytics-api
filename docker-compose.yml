@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    image: realtime-vision-analytics-api:latest
+    container_name: realtime-vision-analytics-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped

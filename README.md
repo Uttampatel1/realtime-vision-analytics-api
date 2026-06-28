@@ -15,11 +15,14 @@ model download and no dataset**, and exposes everything over a FastAPI HTTP API.
 
 - **Detect** bright objects per frame (classical OpenCV: threshold + contours).
 - **Track** them across frames with a centroid tracker that assigns stable IDs.
-- **Analyse** the stream: per-frame object counts, unique objects, and
-  **line-crossing counts** (left→right / right→left).
+- **Analyse** the stream: per-frame object counts, unique objects,
+  **line-crossing counts** (left→right / right→left), and **region-of-interest
+  (zone) analytics** — occupancy, peak occupancy, and per-object **dwell time**
+  for queue-length / loitering use cases.
 - Serve it all behind a small, typed **FastAPI** service.
 
-Example pipeline output over a 60-frame synthetic clip with 4 moving objects:
+Example pipeline output over a 60-frame synthetic clip with 4 moving objects (with
+a zone configured over the middle of the frame):
 
 ```json
 {
@@ -29,7 +32,13 @@ Example pipeline output over a 60-frame synthetic clip with 4 moving objects:
   "avg_objects_per_frame": 3.42,
   "crossings_left_to_right": 3,
   "crossings_right_to_left": 0,
-  "crossings_total": 3
+  "crossings_total": 3,
+  "zone": {
+    "peak_occupancy": 4,
+    "current_occupancy": 0,
+    "unique_visitors": 4,
+    "max_dwell_frames": 21
+  }
 }
 ```
 
@@ -74,9 +83,12 @@ curl -X POST http://localhost:8000/analyze/sequence \
 ## Tech stack
 
 - **Vision:** OpenCV (headless), NumPy
+- **Analytics:** line-crossing counter + **ROI zone occupancy & dwell** (`src/analytics.py`)
 - **Serving:** FastAPI + Uvicorn (Pydantic models)
 - **Optional model backend:** ONNX Runtime (set `DETECTOR=onnx`, `ONNX_MODEL_PATH`)
-- **Tests:** pytest (17 tests, incl. a FastAPI-free pipeline test)
+- **Observability:** structured logging via `src/logging_utils.py` (`LOG_LEVEL` env)
+- **Deploy:** `Dockerfile` + `docker-compose.yml`; GitHub Actions CI runs the suite
+- **Tests:** pytest (25 tests, incl. a FastAPI-free pipeline test and zone/dwell checks)
 
 ## Setup & run
 
@@ -102,10 +114,14 @@ Open `http://localhost:8000/docs` for the interactive Swagger UI.
 │   ├── synthetic.py        # deterministic moving-object scene generator
 │   ├── detection.py        # Detector interface: BlobDetector (+ OnnxDetector hook)
 │   ├── tracking.py         # CentroidTracker (stable IDs across frames)
-│   ├── analytics.py        # line-crossing counter + sequence summary
+│   ├── analytics.py        # line-crossing counter + ROI zone/dwell + summary
 │   ├── pipeline.py         # detect → track → analyse
+│   ├── logging_utils.py    # structured logging + timing
 │   └── api.py              # FastAPI service
-├── tests/                  # 17 pytest tests
+├── tests/                  # 25 pytest tests
+├── Dockerfile              # containerised FastAPI service
+├── docker-compose.yml
+├── .github/workflows/ci.yml
 ├── .env.example
 ├── requirements.txt
 └── .gitignore

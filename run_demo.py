@@ -20,15 +20,22 @@ from src.synthetic import generate_sequence, to_bgr
 def main() -> None:
     settings = get_settings()
     frames = generate_sequence(n_frames=60, n_objects=4, settings=settings)
-    pipeline = VisionPipeline(settings)
+    # A demo region-of-interest in the middle of the frame for occupancy/dwell.
+    zone = (
+        settings.frame_width * 0.35, settings.frame_height * 0.25,
+        settings.frame_width * 0.65, settings.frame_height * 0.75,
+    )
+    pipeline = VisionPipeline(settings, zone=zone)
 
     os.makedirs(settings.data_dir, exist_ok=True)
     line_x = int(line_x_pixels(settings))
+    zx1, zy1, zx2, zy2 = (int(v) for v in zone)
     saved = []
     for frame in frames:
         result = pipeline.process(frame)
         canvas = to_bgr(frame).copy()
         cv2.line(canvas, (line_x, 0), (line_x, settings.frame_height), (0, 0, 255), 2)
+        cv2.rectangle(canvas, (zx1, zy1), (zx2, zy2), (255, 128, 0), 2)  # ROI zone
         for det in result.detections:
             cv2.rectangle(
                 canvas, (det.x, det.y), (det.x + det.w, det.y + det.h),
