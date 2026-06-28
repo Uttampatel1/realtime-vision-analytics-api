@@ -1,0 +1,19 @@
+# Vision / math
+numpy>=1.26,<3.0
+opencv-python-headless==4.10.0.84
+
+# API
+fastapi==0.115.6
+uvicorn==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+
+# Config
+python-dotenv==1.0.1
+
+# Optional: enable the ONNX object-detector backend (set DETECTOR=onnx)
+# onnxruntime==1.20.1
+
+# Dev / tests
+pytest==8.3.4
+httpx==0.28.1
