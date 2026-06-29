@@ -11,6 +11,17 @@ model download and no dataset**, and exposes everything over a FastAPI HTTP API.
 
 ---
 
+<!-- portfolio-visuals -->
+
+## 🔧 How it works
+
+![Real-Time Vision Analytics API — architecture & data flow](./architecture.svg)
+
+*End-to-end flow from input to output — see [`architecture.svg`](./architecture.svg).*
+
+---
+
+
 ## What it does
 
 - **Detect** bright objects per frame (classical OpenCV: threshold + contours).
