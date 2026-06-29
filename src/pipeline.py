@@ -39,15 +39,26 @@ class VisionPipeline:
         self,
         settings: Settings | None = None,
         zone: tuple[float, float, float, float] | None = None,
+        polygons: list[dict] | None = None,
+        track_speed: bool = True,
+        fps: float = 0.0,
+        pixels_per_meter: float = 0.0,
     ):
         self.settings = settings or get_settings()
         self.detector = build_detector(self.settings)
         self.tracker = CentroidTracker(self.settings)
-        self.analytics = SequenceAnalytics(line_x_pixels(self.settings), zone=zone)
+        self.analytics = SequenceAnalytics(
+            line_x_pixels(self.settings),
+            zone=zone,
+            polygons=polygons,
+            track_speed=track_speed,
+            fps=fps,
+            pixels_per_meter=pixels_per_meter,
+        )
         self._frame_index = 0
         log.info(
-            "VisionPipeline ready (detector=%s, zone=%s)",
-            self.settings.detector, zone,
+            "VisionPipeline ready (detector=%s, zone=%s, polygons=%d, speed=%s)",
+            self.settings.detector, zone, len(polygons or []), track_speed,
         )
 
     def process(self, frame: np.ndarray) -> FrameResult:

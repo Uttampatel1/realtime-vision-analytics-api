@@ -10,6 +10,7 @@ import json
 import os
 
 import cv2
+import numpy as np
 
 from src.analytics import line_x_pixels
 from src.config import get_settings
@@ -25,17 +26,31 @@ def main() -> None:
         settings.frame_width * 0.35, settings.frame_height * 0.25,
         settings.frame_width * 0.65, settings.frame_height * 0.75,
     )
-    pipeline = VisionPipeline(settings, zone=zone)
+    # An arbitrary polygon ROI (a diagonal lane) + per-track speed estimation.
+    lane = [
+        (settings.frame_width * 0.10, settings.frame_height * 0.20),
+        (settings.frame_width * 0.55, settings.frame_height * 0.15),
+        (settings.frame_width * 0.90, settings.frame_height * 0.80),
+        (settings.frame_width * 0.30, settings.frame_height * 0.85),
+    ]
+    pipeline = VisionPipeline(
+        settings,
+        zone=zone,
+        polygons=[{"name": "diagonal_lane", "points": lane}],
+        track_speed=True,
+    )
 
     os.makedirs(settings.data_dir, exist_ok=True)
     line_x = int(line_x_pixels(settings))
     zx1, zy1, zx2, zy2 = (int(v) for v in zone)
+    lane_pts = np.array([[int(x), int(y)] for x, y in lane], dtype=np.int32)
     saved = []
     for frame in frames:
         result = pipeline.process(frame)
         canvas = to_bgr(frame).copy()
         cv2.line(canvas, (line_x, 0), (line_x, settings.frame_height), (0, 0, 255), 2)
         cv2.rectangle(canvas, (zx1, zy1), (zx2, zy2), (255, 128, 0), 2)  # ROI zone
+        cv2.polylines(canvas, [lane_pts], True, (200, 0, 200), 2)  # polygon lane
         for det in result.detections:
             cv2.rectangle(
                 canvas, (det.x, det.y), (det.x + det.w, det.y + det.h),

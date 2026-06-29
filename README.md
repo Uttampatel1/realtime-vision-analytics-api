@@ -30,6 +30,12 @@ model download and no dataset**, and exposes everything over a FastAPI HTTP API.
   **line-crossing counts** (left→right / right→left), and **region-of-interest
   (zone) analytics** — occupancy, peak occupancy, and per-object **dwell time**
   for queue-length / loitering use cases.
+- **Arbitrary polygon zones (multiple):** define any-shaped ROIs (lanes, doorways,
+  L-shaped aisles), each named, with a ray-casting point-in-polygon test — not just
+  one axis-aligned rectangle.
+- **Per-track speed estimation:** instantaneous and peak speed per object in
+  pixels/frame, auto-converted to **m/s** when you supply `fps` + `pixels_per_meter`
+  — the basis for speed-limit and flow-rate analytics.
 - Serve it all behind a small, typed **FastAPI** service.
 
 Example pipeline output over a 60-frame synthetic clip with 4 moving objects (with
@@ -94,12 +100,12 @@ curl -X POST http://localhost:8000/analyze/sequence \
 ## Tech stack
 
 - **Vision:** OpenCV (headless), NumPy
-- **Analytics:** line-crossing counter + **ROI zone occupancy & dwell** (`src/analytics.py`)
+- **Analytics:** line-crossing counter + ROI zone occupancy & dwell + **polygon zones** + **per-track speed** (`src/analytics.py`)
 - **Serving:** FastAPI + Uvicorn (Pydantic models)
 - **Optional model backend:** ONNX Runtime (set `DETECTOR=onnx`, `ONNX_MODEL_PATH`)
 - **Observability:** structured logging via `src/logging_utils.py` (`LOG_LEVEL` env)
 - **Deploy:** `Dockerfile` + `docker-compose.yml`; GitHub Actions CI runs the suite
-- **Tests:** pytest (25 tests, incl. a FastAPI-free pipeline test and zone/dwell checks)
+- **Tests:** pytest (31 tests, incl. pipeline, zone/dwell, polygon point-in-polygon, and speed checks)
 
 ## Setup & run
 
@@ -125,11 +131,11 @@ Open `http://localhost:8000/docs` for the interactive Swagger UI.
 │   ├── synthetic.py        # deterministic moving-object scene generator
 │   ├── detection.py        # Detector interface: BlobDetector (+ OnnxDetector hook)
 │   ├── tracking.py         # CentroidTracker (stable IDs across frames)
-│   ├── analytics.py        # line-crossing counter + ROI zone/dwell + summary
+│   ├── analytics.py        # line-crossing + ROI zone/dwell + polygon zones + speed + summary
 │   ├── pipeline.py         # detect → track → analyse
 │   ├── logging_utils.py    # structured logging + timing
 │   └── api.py              # FastAPI service
-├── tests/                  # 25 pytest tests
+├── tests/                  # 31 pytest tests
 ├── Dockerfile              # containerised FastAPI service
 ├── docker-compose.yml
 ├── .github/workflows/ci.yml
@@ -144,7 +150,7 @@ Open `http://localhost:8000/docs` for the interactive Swagger UI.
   real-world classes (people, vehicles) instead of bright blobs.
 - **Robust tracking:** Kalman-filter + IoU/Re-ID matching (SORT/DeepSORT) to stop
   ID switches when objects overlap.
-- **Multi-zone analytics:** dwell time, zone occupancy, and directional flow maps.
+- **Multi-zone analytics:** *(polygon zones, dwell, and per-track speed are now built in)* directional flow maps and cross-zone journeys.
 - **Streaming:** WebSocket/RTSP ingestion with frame batching for true real-time.
 - **Observability:** Prometheus metrics (FPS, latency, counts) and a Grafana board.
 ```
